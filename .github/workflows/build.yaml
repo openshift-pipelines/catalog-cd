@@ -23,6 +23,14 @@ jobs:
       #   run: make lint-go
       - name: go build
         run: go build -v ./...
+      - name: go fmt
+        run: |
+          make fmt
+          changed=$(git diff --name-only)
+          if [ -n "$changed" ]; then
+            echo "Some files are not properly formatted. Please run 'make fmt' and commit the changes."
+            exit 1
+          fi
       - name: go test
         run: go test -v ./...
       - name: build catalog-cd
