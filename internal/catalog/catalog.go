@@ -167,24 +167,24 @@ func untar(dst, version string, tektonResources map[string]contract.TektonResour
 			// to wait until all operations have completed.
 			f.Close()
 
-					if filename != "README.md" {
-							if tektonResource.Checksum != sum {
-									fmt.Fprintf(os.Stderr, "%s checksum is different than the specified checksum in the catalog file: %s", sum, tektonResource.Checksum)
-									// FIXME: maybe handle *all* file before erroring out ?
-									return fmt.Errorf("invalid checksum for %s: %s != %s", filename, sum, tektonResource.Checksum)
-							}
-							fmt.Fprintf(os.Stderr, "✅ %s\n", tektonResource.Filename)
-					}
-
-					// Add "source" annotation to task YAML file
-					if strings.HasSuffix(target, ".yaml") {
-							if err := addSourceAnnotationToTask(target, resourcesURI); err != nil {
-									return err
-							}
-					}
+			if filename != "README.md" {
+				if tektonResource.Checksum != sum {
+					fmt.Fprintf(os.Stderr, "%s checksum is different than the specified checksum in the catalog file: %s", sum, tektonResource.Checksum)
+					// FIXME: maybe handle *all* file before erroring out ?
+					return fmt.Errorf("invalid checksum for %s: %s != %s", filename, sum, tektonResource.Checksum)
+				}
+				fmt.Fprintf(os.Stderr, "✅ %s\n", tektonResource.Filename)
 			}
+
+			// Add "source" annotation to task YAML file
+			if strings.HasSuffix(target, ".yaml") {
+				if err := addSourceAnnotationToTask(target, resourcesURI); err != nil {
+					return err
+				}
+			}
+		}
 	}
-	
+
 }
 
 func addSourceAnnotationToTask(file, resourcesURI string) error {
@@ -194,7 +194,7 @@ func addSourceAnnotationToTask(file, resourcesURI string) error {
 	// Open the Task YAML file
 	f, err := os.OpenFile(file, os.O_RDWR, 0644)
 	if err != nil {
-			return err
+		return err
 	}
 	defer f.Close()
 
@@ -211,45 +211,43 @@ func addSourceAnnotationToTask(file, resourcesURI string) error {
 
 	// Read the file line by line
 	for scanner.Scan() {
-			line := scanner.Text()
+		line := scanner.Text()
 
-			// Check if the line matches the annotations pattern
-			if annotationsPattern.MatchString(line) {
-					// If annotations block is found, initialize sourceAnnotationExists to false
-					sourceAnnotationExists = false
-			}else if !sourceAnnotationExists && sourceAnnotationPattern.MatchString(line) {
-					// If source annotation is found within annotations block, set sourceAnnotationExists to true
-					sourceAnnotationExists = true
-			}
+		// Check if the line matches the annotations pattern
+		if annotationsPattern.MatchString(line) {
+			// If annotations block is found, initialize sourceAnnotationExists to false
+			sourceAnnotationExists = false
+		} else if !sourceAnnotationExists && sourceAnnotationPattern.MatchString(line) {
+			// If source annotation is found within annotations block, set sourceAnnotationExists to true
+			sourceAnnotationExists = true
+		}
 
+		// Append the line to updatedContent slice
+		updatedContent = append(updatedContent, line)
 
-
-			// Append the line to updatedContent slice
-			updatedContent = append(updatedContent, line)
-
-			// Check if we are still within the annotations block
-			if !sourceAnnotationExists && annotationsPattern.MatchString(line) {
-					// Add the source annotation as the first line of the annotations block
-					updatedContent = append(updatedContent, fmt.Sprintf("    tekton.dev/source: \"%s\"", repoURL))
-					sourceAnnotationExists = true // Set sourceAnnotationExists to true after adding the annotation
-			}
+		// Check if we are still within the annotations block
+		if !sourceAnnotationExists && annotationsPattern.MatchString(line) {
+			// Add the source annotation as the first line of the annotations block
+			updatedContent = append(updatedContent, fmt.Sprintf("    tekton.dev/source: \"%s\"", repoURL))
+			sourceAnnotationExists = true // Set sourceAnnotationExists to true after adding the annotation
+		}
 	}
 
 	// Check for scanner errors
 	if err := scanner.Err(); err != nil {
-			return err
+		return err
 	}
 
 	// Clear the file content and write the updated content
 	if err := f.Truncate(0); err != nil {
-			return err
+		return err
 	}
 	if _, err := f.Seek(0, 0); err != nil {
-			return err
+		return err
 	}
 	writer := bufio.NewWriter(f)
 	for _, line := range updatedContent {
-			fmt.Fprintln(writer, line)
+		fmt.Fprintln(writer, line)
 	}
 	return writer.Flush()
 }
@@ -285,8 +283,3 @@ func getResourcesFromType(release Release, resourceType string) map[string]contr
 	}
 	return m
 }
-
-
-
-
-
