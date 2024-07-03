@@ -84,6 +84,12 @@ func runCatalogExternals(_ context.Context, cfg *config.Config, args []string, o
 			m.Include = append(m.Include, o)
 		}
 	}
+
+	err = testNameConflicts(m)
+	if err != nil {
+		return err
+	}
+
 	j, err := json.Marshal(m)
 	if err != nil {
 		return err
