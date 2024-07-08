@@ -17,3 +17,9 @@ catalog:
         checksum: e84e01f61a25aee509a4e3513b19f8f33a865eed60fd17647b56df8b716edfde
         signature: ""
     pipelines: []
+    stepactions:
+      - name: git-clone
+        version: 0.5.0
+        filename: stepactions/git-clone/git-clone.yaml
+        checksum: e1936acd745f23ceac3fb1b6dbe4f859e99a7b4547b4e3f26f273726821ff9ea
+        signature: ""
