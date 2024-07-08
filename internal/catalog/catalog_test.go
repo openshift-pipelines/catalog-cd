@@ -87,6 +87,12 @@ func TestGenerateFilesystem(t *testing.T) {
 								Checksum: "e84e01f61a25aee509a4e3513b19f8f33a865eed60fd17647b56df8b716edfde",
 							}},
 							Pipelines: []*contract.TektonResource{},
+							StepActions: []*contract.TektonResource{{
+								Name:     "git-clone",
+								Version:  "0.5.0",
+								Filename: "stepactions/git-clone/git-clone.yaml",
+								Checksum: "e1936acd745f23ceac3fb1b6dbe4f859e99a7b4547b4e3f26f273726821ff9ea",
+							}},
 						},
 					},
 				},
@@ -97,20 +103,29 @@ func TestGenerateFilesystem(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := fs.Expected(t, fs.WithDir("tasks",
-		fs.WithDir("go-crane-image",
+
+	expected := fs.Expected(t, fs.WithDir("stepactions",
+		fs.WithDir("git-clone",
 			fs.WithDir("0.5.0",
-				fs.WithFile("go-crane-image.yaml", "", fs.WithBytes(golden.Get(t, "tasks/go-crane-image/go-crane-image.yaml"))),
-				fs.WithFile("README.md", "", fs.WithBytes(golden.Get(t, "tasks/go-crane-image/README.md"))),
+				fs.WithFile("git-clone.yaml", "", fs.WithBytes(golden.Get(t, "stepactions/git-clone/git-clone.yaml"))),
+				fs.WithFile("README.md", "", fs.WithBytes(golden.Get(t, "stepactions/git-clone/README.md"))),
+			),
+		)),
+		fs.WithDir("tasks",
+			fs.WithDir("go-crane-image",
+				fs.WithDir("0.5.0",
+					fs.WithFile("go-crane-image.yaml", "", fs.WithBytes(golden.Get(t, "tasks/go-crane-image/go-crane-image.yaml"))),
+					fs.WithFile("README.md", "", fs.WithBytes(golden.Get(t, "tasks/go-crane-image/README.md"))),
+				),
+			),
+			fs.WithDir("go-ko-image",
+				fs.WithDir("0.5.0",
+					fs.WithFile("go-ko-image.yaml", "", fs.WithBytes(golden.Get(t, "tasks/go-ko-image/go-ko-image.yaml"))),
+					fs.WithFile("README.md", "", fs.WithBytes(golden.Get(t, "tasks/go-ko-image/README.md"))),
+				),
 			),
 		),
-		fs.WithDir("go-ko-image",
-			fs.WithDir("0.5.0",
-				fs.WithFile("go-ko-image.yaml", "", fs.WithBytes(golden.Get(t, "tasks/go-ko-image/go-ko-image.yaml"))),
-				fs.WithFile("README.md", "", fs.WithBytes(golden.Get(t, "tasks/go-ko-image/README.md"))),
-			),
-		),
-	))
+	)
 
 	assert.Assert(t, fs.Equal(dir.Path(), expected))
 }
