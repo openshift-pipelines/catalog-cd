@@ -23,9 +23,5 @@ func MakeGetRequest(uri string) (*http.Response, error) {
 		return nil, err
 	}
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
+	return http.DefaultClient.Do(req)
 }
