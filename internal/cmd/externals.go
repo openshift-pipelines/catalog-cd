@@ -85,8 +85,7 @@ func runCatalogExternals(_ context.Context, cfg *config.Config, args []string, o
 		}
 	}
 
-	err = testNameConflicts(m)
-	if err != nil {
+	if err = verifyNameConflicts(m); err != nil {
 		return err
 	}
 

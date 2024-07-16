@@ -8,46 +8,33 @@ import (
 	"os"
 	"strings"
 
+	"github.com/openshift-pipelines/catalog-cd/internal/contract"
 	"gopkg.in/yaml.v2"
 )
 
+// GithubTags represents the response JSON when fetching various tags/releases of a github repo
 type GithubTags struct {
 	TagName string         `json:"tag_name"`
 	URL     string         `json:"url"`
 	Assets  []GithubAssets `json:"assets"`
 }
 
+// GithubAssets represents the Assets field of the GithubTags
 type GithubAssets struct {
 	Name               string `json:"name"`
 	BrowserDownloadURL string `json:"browser_download_url"`
 	URL                string `json:"url"`
 }
 
-type ResourcesConfig struct {
-	TasksConfig     []ResourceConfig `yaml:"tasks"`
-	PipelinesConfig []ResourceConfig `yaml:"pipelines"`
-}
-
-type ResourceConfig struct {
-	Name    string `yaml:"name"`
-	Version string `yaml:"version"`
-}
-
-type CatalogConfig struct {
-	Resources ResourcesConfig `yaml:"resources"`
-}
-
-type Catalog struct {
-	Version string        `yaml:"version"`
-	Catalog CatalogConfig `yaml:"catalog"`
-}
-
+// ResourceInfo represents the value field of our map whose key would be the Name of the resource
 type ResourceInfo struct {
 	Source  string
 	Version string
 }
 
-func testNameConflicts(m GitHubMatrixObject) error {
+// verifyNameConflicts function handles the logic to fetch the various releases from the repos & check whether they have any conflicts in their Name,
+// either from the same repo. i.e. same source or from different repo. i.e. different source
+func verifyNameConflicts(m GitHubMatrixObject) error {
 	tempDirPath, err := os.MkdirTemp("", "example")
 	if err != nil {
 		return err
@@ -81,15 +68,14 @@ func testNameConflicts(m GitHubMatrixObject) error {
 		}
 
 		var releases []GithubTags
-		err = json.Unmarshal(tagsBody, &releases)
-		if err != nil {
+		if err = json.Unmarshal(tagsBody, &releases); err != nil {
 			return err
 		}
 
 		for _, release := range releases {
 			if !strings.Contains(githubObj.IgnoreVersions, release.TagName) {
 				for _, asset := range release.Assets {
-					if asset.Name == "catalog.yaml" {
+					if asset.Name == contract.Filename {
 						filePath := tempDirPath + "/" + githubObj.Type + "-" + release.TagName + "-" + githubObj.Name + ".yaml"
 						err := downloadAndParseFile(asset.BrowserDownloadURL, filePath, githubObj.Type, kindSourceMap)
 						if err != nil {
@@ -104,20 +90,20 @@ func testNameConflicts(m GitHubMatrixObject) error {
 	return nil
 }
 
+// downloadAndParseFile function calls the downloadFile & parseFile functions which downloads the various catalog.yaml files of each release & then parses them
 func downloadAndParseFile(url, filepath, kind string, unique map[string]map[string][]ResourceInfo) error {
-	err := downloadFile(url, filepath)
-	if err != nil {
+	if err := downloadFile(url, filepath); err != nil {
 		return err
 	}
 
-	err = parseFile(filepath, kind, unique, url)
-	if err != nil {
+	if err := parseFile(filepath, kind, unique, url); err != nil {
 		return err
 	}
 
 	return nil
 }
 
+// downloadFile function downloads the file mentioned in the url & stores it in the mentioned filepath
 func downloadFile(url, filepath string) error {
 	file, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
@@ -135,61 +121,68 @@ func downloadFile(url, filepath string) error {
 		return fmt.Errorf("server returned non-200 status code: %v", res.Status)
 	}
 
-	_, err = io.Copy(file, res.Body)
-	if err != nil {
+	if _, err = io.Copy(file, res.Body); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func parseResources(resources []ResourceConfig, unique map[string][]ResourceInfo, source string) error {
+// parseResources function parses the resources & checks for uniqueness
+func parseResources(resources []*contract.TektonResource, unique map[string][]ResourceInfo, source string, kind string) error {
 	for _, res := range resources {
-		_, exists := unique[res.Name]
+		name := res.Name
+		version := res.Version
+		_, exists := unique[name]
 
 		if exists {
-			currResources := unique[res.Name]
+			currResources := unique[name]
+			//Checks whether the sources are different
 			if currResources[0].Source != source {
-				return fmt.Errorf("different source, same name, \nsource1: %s\nsource2: %s", currResources[0].Source, source)
+				return fmt.Errorf("2 resources of kind '%s', have same name '%s', from different sources, \nsource1: %s\nsource2: %s", kind, name, currResources[0].Source, source)
 			}
+			//Checks whether the versions are same or not, if its from same source
 			for _, currResource := range currResources {
-				if currResource.Version == res.Version {
-					return fmt.Errorf("2 resources have same name from same source, %s", source)
+				if currResource.Version == version {
+					return fmt.Errorf("2 resources of kind '%s', have same name '%s', from same source '%s'", kind, name, source)
 				}
 			}
-			unique[res.Name] = append(unique[res.Name], ResourceInfo{Version: res.Version, Source: source})
+			//If none of the above then the resource is still unique so append
+			unique[name] = append(unique[name], ResourceInfo{Version: version, Source: source})
 		} else {
-			unique[res.Name] = []ResourceInfo{{Version: res.Version, Source: source}}
+			//If no name conflict then resource is unique so append
+			unique[name] = []ResourceInfo{{Version: version, Source: source}}
 		}
 	}
 	return nil
 }
 
+// parseFile function parses the file present in the path & then calls the parseResources function to check for uniqueness
 func parseFile(path, kind string, unique map[string]map[string][]ResourceInfo, source string) error {
 	yamlFile, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
 
-	var catalog Catalog
+	var catalog contract.Contract
 
 	err = yaml.Unmarshal(yamlFile, &catalog)
 	if err != nil {
 		return err
 	}
 
-	var resources []ResourceConfig
+	var resources []*contract.TektonResource
 
 	switch kind {
 	case "tasks":
-		resources = catalog.Catalog.Resources.TasksConfig
+		resources = catalog.Catalog.Resources.Tasks
 	case "pipelines":
-		resources = catalog.Catalog.Resources.PipelinesConfig
+		resources = catalog.Catalog.Resources.Pipelines
 	default:
 		return fmt.Errorf("kind is neither tasks nor pipelines")
 	}
 
-	err = parseResources(resources, unique[kind], source)
+	err = parseResources(resources, unique[kind], source, kind)
 	if err != nil {
 		return err
 	}
