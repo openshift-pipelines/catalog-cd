@@ -12,28 +12,28 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// GithubTags represents the response JSON when fetching various tags/releases of a github repo
-type GithubTags struct {
+// GitHubTags represents the response JSON when fetching various tags/releases of a GitHub repo.
+type GitHubTags struct {
 	TagName string         `json:"tag_name"`
 	URL     string         `json:"url"`
-	Assets  []GithubAssets `json:"assets"`
+	Assets  []GitHubAssets `json:"assets"`
 }
 
-// GithubAssets represents the Assets field of the GithubTags
-type GithubAssets struct {
+// GitHubAssets represents the Assets field of the GitHubTags.
+type GitHubAssets struct {
 	Name               string `json:"name"`
 	BrowserDownloadURL string `json:"browser_download_url"`
 	URL                string `json:"url"`
 }
 
-// ResourceInfo represents the value field of our map whose key would be the Name of the resource
+// ResourceInfo represents the value field of a map where the key is the name of the resource.
 type ResourceInfo struct {
 	Source  string
 	Version string
 }
 
 // verifyNameConflicts function handles the logic to fetch the various releases from the repos & check whether they have any conflicts in their Name,
-// either from the same repo. i.e. same source or from different repo. i.e. different source
+// either from the same repo. i.e. same source or from different repo. i.e. different source.
 func verifyNameConflicts(m GitHubMatrixObject) error {
 	tempDirPath, err := os.MkdirTemp("", "example")
 	if err != nil {
@@ -67,7 +67,7 @@ func verifyNameConflicts(m GitHubMatrixObject) error {
 			return err
 		}
 
-		var releases []GithubTags
+		var releases []GitHubTags
 		if err = json.Unmarshal(tagsBody, &releases); err != nil {
 			return err
 		}
@@ -76,7 +76,7 @@ func verifyNameConflicts(m GitHubMatrixObject) error {
 			if !strings.Contains(githubObj.IgnoreVersions, release.TagName) {
 				for _, asset := range release.Assets {
 					if asset.Name == contract.Filename {
-						filePath := tempDirPath + "/" + githubObj.Type + "-" + release.TagName + "-" + githubObj.Name + ".yaml"
+						filePath := fmt.Sprintf("%s/%s-%s-%s.yaml", tempDirPath, githubObj.Type, release.TagName, githubObj.Name)
 						err := downloadAndParseFile(asset.BrowserDownloadURL, filePath, githubObj.Type, kindSourceMap)
 						if err != nil {
 							return err
@@ -90,7 +90,7 @@ func verifyNameConflicts(m GitHubMatrixObject) error {
 	return nil
 }
 
-// downloadAndParseFile function calls the downloadFile & parseFile functions which downloads the various catalog.yaml files of each release & then parses them
+// downloadAndParseFile function downloads the various catalog.yaml files of each release & then parses them.
 func downloadAndParseFile(url, filepath, kind string, unique map[string]map[string][]ResourceInfo) error {
 	if err := downloadFile(url, filepath); err != nil {
 		return err
@@ -103,7 +103,7 @@ func downloadAndParseFile(url, filepath, kind string, unique map[string]map[stri
 	return nil
 }
 
-// downloadFile function downloads the file mentioned in the url & stores it in the mentioned filepath
+// downloadFile function downloads the file mentioned in the url & stores it in the mentioned filepath.
 func downloadFile(url, filepath string) error {
 	file, err := os.OpenFile(filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
@@ -128,8 +128,8 @@ func downloadFile(url, filepath string) error {
 	return nil
 }
 
-// parseResources function parses the resources & checks for uniqueness
-func parseResources(resources []*contract.TektonResource, unique map[string][]ResourceInfo, source string, kind string) error {
+// parseResources function parses the resources & checks for uniqueness.
+func parseResources(resources []*contract.TektonResource, unique map[string][]ResourceInfo, source, kind string) error {
 	for _, res := range resources {
 		name := res.Name
 		version := res.Version
@@ -137,27 +137,27 @@ func parseResources(resources []*contract.TektonResource, unique map[string][]Re
 
 		if exists {
 			currResources := unique[name]
-			//Checks whether the sources are different
+			// Checks whether the sources are different.
 			if currResources[0].Source != source {
-				return fmt.Errorf("2 resources of kind '%s', have same name '%s', from different sources, \nsource1: %s\nsource2: %s", kind, name, currResources[0].Source, source)
+				return fmt.Errorf("two resources of kind '%s', have same name '%s', from different sources, \nsource1: %s\nsource2: %s", kind, name, currResources[0].Source, source)
 			}
-			//Checks whether the versions are same or not, if its from same source
+			// Checks whether the versions are same or not, if its from same source.
 			for _, currResource := range currResources {
 				if currResource.Version == version {
-					return fmt.Errorf("2 resources of kind '%s', have same name '%s', from same source '%s'", kind, name, source)
+					return fmt.Errorf("two resources of kind '%s', have same name '%s', from same source '%s'", kind, name, source)
 				}
 			}
-			//If none of the above then the resource is still unique so append
+			// If none of the above that means the 2 resources with the same name are from same source and have different versions which is allowed so append the new versions found.
 			unique[name] = append(unique[name], ResourceInfo{Version: version, Source: source})
 		} else {
-			//If no name conflict then resource is unique so append
+			// If no name conflict then resource is unique so append.
 			unique[name] = []ResourceInfo{{Version: version, Source: source}}
 		}
 	}
 	return nil
 }
 
-// parseFile function parses the file present in the path & then calls the parseResources function to check for uniqueness
+// parseFile function parses the catalog file given in the path argument, gets the resources mentioned in this catalog file & then calls the parseResources function to check for uniqueness.
 func parseFile(path, kind string, unique map[string]map[string][]ResourceInfo, source string) error {
 	yamlFile, err := os.ReadFile(path)
 	if err != nil {
