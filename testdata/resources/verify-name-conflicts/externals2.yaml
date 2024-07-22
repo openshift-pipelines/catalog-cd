@@ -1,0 +1,9 @@
+repositories:
+  - url: https://github.com/Aneesh-M-Bhat/test-release-1
+    types:
+      - tasks
+      - pipelines
+  - url: https://github.com/Aneesh-M-Bhat/test-release-2
+    types:
+      - tasks
+      - pipelines
