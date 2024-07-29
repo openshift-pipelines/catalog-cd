@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/openshift-pipelines/catalog-cd/internal/contract"
@@ -44,6 +45,7 @@ func verifyNameConflicts(m GitHubMatrixObject) error {
 	kindSourceMap := make(map[string]map[string][]ResourceInfo)
 	kindSourceMap["tasks"] = make(map[string][]ResourceInfo)
 	kindSourceMap["pipelines"] = make(map[string][]ResourceInfo)
+	kindSourceMap["stepactions"] = make(map[string][]ResourceInfo)
 
 	for _, githubObj := range m.Include {
 		var orgURL string
@@ -130,6 +132,11 @@ func downloadFile(url, filepath string) error {
 
 // parseResources function parses the resources & checks for uniqueness.
 func parseResources(resources []*contract.TektonResource, unique map[string][]ResourceInfo, source, kind string) error {
+	source1, err := extractBaseURL(source)
+	if err != nil {
+		return err
+	}
+
 	for _, res := range resources {
 		name := res.Name
 		version := res.Version
@@ -137,8 +144,14 @@ func parseResources(resources []*contract.TektonResource, unique map[string][]Re
 
 		if exists {
 			currResources := unique[name]
+
+			source2, err := extractBaseURL(currResources[0].Source)
+			if err != nil {
+				return err
+			}
+
 			// Checks whether the sources are different.
-			if currResources[0].Source != source {
+			if source1 != source2 {
 				return fmt.Errorf("two resources of kind '%s', have same name '%s', from different sources, \nsource1: %s\nsource2: %s", kind, name, currResources[0].Source, source)
 			}
 			// Checks whether the versions are same or not, if its from same source.
@@ -178,8 +191,10 @@ func parseFile(path, kind string, unique map[string]map[string][]ResourceInfo, s
 		resources = catalog.Catalog.Resources.Tasks
 	case "pipelines":
 		resources = catalog.Catalog.Resources.Pipelines
+	case "stepactions":
+		resources = catalog.Catalog.Resources.StepActions
 	default:
-		return fmt.Errorf("kind is neither tasks nor pipelines")
+		return fmt.Errorf("kind is not tasks, pipelines or stepactions")
 	}
 
 	err = parseResources(resources, unique[kind], source, kind)
@@ -188,4 +203,15 @@ func parseFile(path, kind string, unique map[string]map[string][]ResourceInfo, s
 	}
 
 	return nil
+}
+
+func extractBaseURL(url string) (string, error) {
+	re := regexp.MustCompile(`^(https://github\.com/[^/]+/[^/]+)`)
+
+	match := re.FindStringSubmatch(url)
+	if len(match) < 2 {
+		return "", fmt.Errorf("base URL not found in: %s", url)
+	}
+
+	return match[1], nil
 }
