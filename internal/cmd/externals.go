@@ -62,7 +62,7 @@ func runCatalogExternals(_ context.Context, cfg *config.Config, args []string, o
 	for _, repository := range e.Repositories {
 		types := repository.Types
 		if len(types) == 0 {
-			types = []string{"tasks", "pipelines"}
+			types = []string{"tasks", "pipelines", "stepactions"}
 		}
 		ignoreVersions := ""
 		if len(repository.IgnoreVersions) > 0 {
