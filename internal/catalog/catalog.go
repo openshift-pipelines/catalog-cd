@@ -205,30 +205,43 @@ func addSourceAnnotationToTask(file, resourcesURI string) error {
 	annotationsPattern := regexp.MustCompile(`^\s+annotations:\s*$`)
 	sourceAnnotationPattern := regexp.MustCompile(`^\s+tekton\.dev/source:\s*".*"$`)
 
-	// Flag to indicate if the "tekton.dev/source" annotation is already present
-	var sourceAnnotationExists bool
+	// Flag to indicate if we are within the annotations block
+	var inAnnotationsBlock bool
+
+	// Buffer to store annotations lines
+	var annotationsBuffer []string
 
 	// Read the file line by line
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// Check if the line matches the annotations pattern
-		if annotationsPattern.MatchString(line) {
-			// If annotations block is found, initialize sourceAnnotationExists to false
-			sourceAnnotationExists = false
-		} else if !sourceAnnotationExists && sourceAnnotationPattern.MatchString(line) {
-			// If source annotation is found within annotations block, set sourceAnnotationExists to true
-			sourceAnnotationExists = true
-		}
-
-		// Append the line to updatedContent slice
-		updatedContent = append(updatedContent, line)
-
-		// Check if we are still within the annotations block
-		if !sourceAnnotationExists && annotationsPattern.MatchString(line) {
+		switch {
+		case annotationsPattern.MatchString(line):
+			// If annotations block is found, set the inAnnotationsBlock flag to true
+			inAnnotationsBlock = true
+			// Append the line to updatedContent slice
+			updatedContent = append(updatedContent, line)
 			// Add the source annotation as the first line of the annotations block
 			updatedContent = append(updatedContent, fmt.Sprintf("    tekton.dev/source: \"%s\"", repoURL))
-			sourceAnnotationExists = true // Set sourceAnnotationExists to true after adding the annotation
+		case inAnnotationsBlock:
+			switch {
+			case sourceAnnotationPattern.MatchString(line):
+				// Skip the existing source annotation
+				continue
+			case strings.TrimSpace(line) == "" || !strings.HasPrefix(line, " "):
+				// If a non-indented line or an empty line is found, we consider it as the end of the annotations block
+				inAnnotationsBlock = false
+				// Append buffered annotations lines
+				updatedContent = append(updatedContent, annotationsBuffer...)
+				// Append the current line
+				updatedContent = append(updatedContent, line)
+			default:
+				// Buffer the annotation lines
+				annotationsBuffer = append(annotationsBuffer, line)
+			}
+		default:
+			// Append the line to updatedContent slice
+			updatedContent = append(updatedContent, line)
 		}
 	}
 
