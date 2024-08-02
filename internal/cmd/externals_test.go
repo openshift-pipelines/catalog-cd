@@ -38,24 +38,24 @@ func TestScenarios(t *testing.T) {
 	testDir := "../../testdata/resources/externals"
 	tests := []TestConfig{
 		{
-			Name:          "Pulling a single repo with no conflicts",
+			Name:          "Pulling a single repo with no name conflicts",
 			ExpectError:   false,
 			ExternalsFile: path.Join(testDir, "externals1.yaml"),
 		},
 		{
-			Name:                   "Pulling from multiple repos with conflicts",
+			Name:                   "Pulling from multiple repos with name conflicts",
 			ExternalsFile:          path.Join(testDir, "externals2.yaml"),
 			ExpectError:            true,
 			ExpectedErrorSubstring: "different sources",
 		},
 		{
-			Name:                   "Pulling a single repo with conflicts",
+			Name:                   "Pulling a single repo with name conflicts",
 			ExternalsFile:          path.Join(testDir, "externals3.yaml"),
 			ExpectError:            true,
 			ExpectedErrorSubstring: "same source",
 		},
 		{
-			Name:          "Pulling from multiple repos with no conflicts",
+			Name:          "Pulling from multiple repos with no name conflicts",
 			ExternalsFile: path.Join(testDir, "externals4.yaml"),
 			ExpectError:   false,
 		},
