@@ -826,8 +826,8 @@ github.com/tchap/go-patricia/v2 v2.3.1 h1:6rQp39lgIYZ+MHmdEq4xzuk1t7OdC35z/xm0BG
 github.com/tchap/go-patricia/v2 v2.3.1/go.mod h1:VZRHKAb53DLaG+nA9EaYYiaEx6YztwDlLElMsnSHD4k=
 github.com/tektoncd/cli v0.37.0 h1:C+1/N+cGwj3ClIH9An2FggoplQ36zID7+5I0q03lrF0=
 github.com/tektoncd/cli v0.37.0/go.mod h1:RageyyvtjqucJ5l0yPInjHCgdyf8Tz7EFZXFjv6ROGQ=
-github.com/tektoncd/pipeline v0.64.0 h1:JXS9zz+B3lryQQ0f81AVmFC09+itQuxtVtQ1oWIgPkc=
-github.com/tektoncd/pipeline v0.64.0/go.mod h1:V3cyfxxc7b3GLT2a13GX2mWA86qmxWhh4mOp4gfFQwQ=
+github.com/tektoncd/pipeline v0.65.0 h1:MIXXt/OeV/SLQ0KYXXBzPHBwXe2iIhgZcJBHkkgzaYY=
+github.com/tektoncd/pipeline v0.65.0/go.mod h1:V3cyfxxc7b3GLT2a13GX2mWA86qmxWhh4mOp4gfFQwQ=
 github.com/tektoncd/triggers v0.27.0 h1:c55e/YJF6Vs5BEarqDYksFYuR4sFbmAVEqrLNPZvXUk=
 github.com/tektoncd/triggers v0.27.0/go.mod h1:DkkAkdSd9aAW9RklUVyFRKQ8kONmZQw4Ur2G1r3wFQo=
 github.com/thales-e-security/pool v0.0.2 h1:RAPs4q2EbWsTit6tpzuvTFlgFRJ3S8Evf5gtvVDbmPg=
