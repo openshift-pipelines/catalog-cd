@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 
 	"github.com/cli/go-gh/v2/internal/set"
@@ -62,35 +61,42 @@ func TokenFromEnvOrConfig(host string) (string, string) {
 }
 
 func tokenForHost(cfg *config.Config, host string) (string, string) {
-	host = NormalizeHostname(host)
-	if IsEnterprise(host) {
+	normalizedHost := NormalizeHostname(host)
+	// This code is currently the exact opposite of IsEnterprise. However, we have chosen
+	// to write it separately, directly in line, because it is much clearer in the exact
+	// scenarios that we expect to use GH_TOKEN and GITHUB_TOKEN.
+	if normalizedHost == github || IsTenancy(normalizedHost) || normalizedHost == localhost {
+		if token := os.Getenv(ghToken); token != "" {
+			return token, ghToken
+		}
+
+		if token := os.Getenv(githubToken); token != "" {
+			return token, githubToken
+		}
+	} else {
 		if token := os.Getenv(ghEnterpriseToken); token != "" {
 			return token, ghEnterpriseToken
 		}
+
 		if token := os.Getenv(githubEnterpriseToken); token != "" {
 			return token, githubEnterpriseToken
 		}
-		if isCodespaces, _ := strconv.ParseBool(os.Getenv(codespaces)); isCodespaces {
-			if token := os.Getenv(githubToken); token != "" {
-				return token, githubToken
-			}
-		}
-		if cfg != nil {
-			token, _ := cfg.Get([]string{hostsKey, host, oauthToken})
-			return token, oauthToken
-		}
 	}
-	if token := os.Getenv(ghToken); token != "" {
-		return token, ghToken
+
+	// If config is nil, something has failed much earlier and it's probably
+	// more correct to panic because we don't expect to support anything
+	// where the config isn't available, but that would be a breaking change,
+	// so it's worth thinking about carefully, if we wanted to rework this.
+	if cfg == nil {
+		return "", defaultSource
 	}
-	if token := os.Getenv(githubToken); token != "" {
-		return token, githubToken
+
+	token, err := cfg.Get([]string{hostsKey, normalizedHost, oauthToken})
+	if err != nil {
+		return "", defaultSource
 	}
-	if cfg != nil {
-		token, _ := cfg.Get([]string{hostsKey, host, oauthToken})
-		return token, oauthToken
-	}
-	return "", defaultSource
+
+	return token, oauthToken
 }
 
 func tokenFromGh(path string, host string) (string, string) {
@@ -151,8 +157,10 @@ func defaultHost(cfg *config.Config) (string, string) {
 }
 
 // IsEnterprise determines if a provided host is a GitHub Enterprise Server instance,
-// rather than GitHub.com or a tenancy GitHub instance.
+// rather than GitHub.com, a tenancy GitHub instance, or github.localhost.
 func IsEnterprise(host string) bool {
+	// Note that if you are making changes here, you should also consider making the equivalent
+	// in tokenForHost, which is the exact opposite of this function.
 	normalizedHost := NormalizeHostname(host)
 	return normalizedHost != github && normalizedHost != localhost && !IsTenancy(normalizedHost)
 }

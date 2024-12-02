@@ -5,7 +5,7 @@ go 1.22.0
 toolchain go1.22.4
 
 require (
-	github.com/cli/go-gh/v2 v2.11.0
+	github.com/cli/go-gh/v2 v2.11.1
 	github.com/go-errors/errors v1.5.1
 	github.com/onsi/gomega v1.36.0
 	github.com/sigstore/cosign/v2 v2.2.4
