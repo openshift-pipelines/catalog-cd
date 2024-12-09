@@ -1248,7 +1248,7 @@ github.com/tchap/go-patricia/v2/patricia
 # github.com/tektoncd/cli v0.37.0
 ## explicit; go 1.22.0
 github.com/tektoncd/cli/pkg/cli
-# github.com/tektoncd/pipeline v0.65.2
+# github.com/tektoncd/pipeline v0.66.0
 ## explicit; go 1.22
 github.com/tektoncd/pipeline/internal/artifactref
 github.com/tektoncd/pipeline/pkg/apis/config
