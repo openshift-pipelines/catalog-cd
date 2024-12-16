@@ -875,7 +875,7 @@ github.com/oklog/ulid
 # github.com/oleiade/reflections v1.0.1
 ## explicit; go 1.15
 github.com/oleiade/reflections
-# github.com/onsi/gomega v1.36.0
+# github.com/onsi/gomega v1.36.1
 ## explicit; go 1.22
 github.com/onsi/gomega
 github.com/onsi/gomega/format
