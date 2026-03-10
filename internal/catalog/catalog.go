@@ -2,7 +2,6 @@ package catalog
 
 import (
 	"archive/tar"
-	"bufio"
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
@@ -187,68 +186,48 @@ func untar(dst, version string, tektonResources map[string]contract.TektonResour
 }
 
 func addSourceAnnotationToTask(file, resourcesURI string) error {
-	// Add the new annotation
 	repoURL := extractRepositoryURL(resourcesURI)
 
-	// Open the Task YAML file
-	f, err := os.OpenFile(file, os.O_RDWR, 0o644)
+	content, err := os.ReadFile(file)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 
-	// Create a scanner to read the file line by line
-	scanner := bufio.NewScanner(f)
-	var updatedContent []string
+	lines := strings.Split(string(content), "\n")
 
-	// Regular expression pattern to match the annotations in Task metadata
-	annotationsPattern := regexp.MustCompile(`^\s+annotations:\s*$`)
-	sourceAnnotationPattern := regexp.MustCompile(`^\s+tekton\.dev/source:\s*".*"$`)
+	// Match only the top-level metadata annotations block (exactly 2 leading spaces)
+	annotationsPattern := regexp.MustCompile(`^  annotations:\s*$`)
+	sourceAnnotationPattern := regexp.MustCompile(`^    tekton\.dev/source:\s*".*"$`)
 
-	// Flag to indicate if the "tekton.dev/source" annotation is already present
-	var sourceAnnotationExists bool
-
-	// Read the file line by line
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		// Check if the line matches the annotations pattern
+	// find the top-level annotations block and check if source already exists
+	annotationsLineIdx := -1
+	sourceAlreadyExists := false
+	for i, line := range lines {
 		if annotationsPattern.MatchString(line) {
-			// If annotations block is found, initialize sourceAnnotationExists to false
-			sourceAnnotationExists = false
-		} else if !sourceAnnotationExists && sourceAnnotationPattern.MatchString(line) {
-			// If source annotation is found within annotations block, set sourceAnnotationExists to true
-			sourceAnnotationExists = true
+			annotationsLineIdx = i
+			continue
 		}
-
-		// Append the line to updatedContent slice
-		updatedContent = append(updatedContent, line)
-
-		// Check if we are still within the annotations block
-		if !sourceAnnotationExists && annotationsPattern.MatchString(line) {
-			// Add the source annotation as the first line of the annotations block
-			updatedContent = append(updatedContent, fmt.Sprintf("    tekton.dev/source: \"%s\"", repoURL))
-			sourceAnnotationExists = true // Set sourceAnnotationExists to true after adding the annotation
+		if annotationsLineIdx >= 0 && sourceAnnotationPattern.MatchString(line) {
+			sourceAlreadyExists = true
+			break
+		}
+		// Stop scanning once we leave the annotations block (non-annotation-indented line after annotations:)
+		if annotationsLineIdx >= 0 && !strings.HasPrefix(line, "    ") {
+			break
 		}
 	}
 
-	// Check for scanner errors
-	if err := scanner.Err(); err != nil {
-		return err
+	if sourceAlreadyExists || annotationsLineIdx < 0 {
+		return nil
 	}
 
-	// Clear the file content and write the updated content
-	if err := f.Truncate(0); err != nil {
-		return err
-	}
-	if _, err := f.Seek(0, 0); err != nil {
-		return err
-	}
-	writer := bufio.NewWriter(f)
-	for _, line := range updatedContent {
-		fmt.Fprintln(writer, line)
-	}
-	return writer.Flush()
+	// Insert the source annotation right after the annotations: line
+	updatedLines := make([]string, 0, len(lines)+1)
+	updatedLines = append(updatedLines, lines[:annotationsLineIdx+1]...)
+	updatedLines = append(updatedLines, fmt.Sprintf("    tekton.dev/source: \"%s\"", repoURL))
+	updatedLines = append(updatedLines, lines[annotationsLineIdx+1:]...)
+
+	return os.WriteFile(file, []byte(strings.Join(updatedLines, "\n")), 0o644)
 }
 
 // Function to extract repository URL from resource tarball URL.
