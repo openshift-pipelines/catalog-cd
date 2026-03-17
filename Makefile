@@ -1,7 +1,7 @@
 BIN = catalog-cd
 
 DOTBIN      = $(CURDIR)/.bin
-GOLANGCI_VERSION = v1.58.0
+GOLANGCI_VERSION = v2.8.0
 
 TIMEOUT_UNIT = 20m
 
@@ -56,10 +56,7 @@ lint: lint-go lint-yaml lint-md lint-shell ## run all linters
 .PHONY: lint-go
 lint-go: $(GOLANGCILINT) ## runs go linter on all go files
 	@echo "Linting go files..."
-	@$(GOLANGCILINT) run ./... --modules-download-mode=vendor \
-							--max-issues-per-linter=0 \
-							--max-same-issues=0 \
-							--timeout $(TIMEOUT_UNIT)
+	@$(GOLANGCILINT) run ./... --timeout $(TIMEOUT_UNIT)
 
 .PHONY: lint-shell
 lint-shell: ${SH_FILES} ## runs shellcheck on all python files
