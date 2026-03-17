@@ -1,7 +1,6 @@
 module github.com/openshift-pipelines/catalog-cd
 
-go 1.22.0
-toolchain go1.23.4
+go 1.25.0
 
 require (
 	github.com/cli/go-gh/v2 v2.11.1
