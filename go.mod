@@ -8,7 +8,7 @@ require (
 	github.com/onsi/gomega v1.36.2
 	github.com/sigstore/cosign/v2 v2.2.4
 	github.com/spf13/cobra v1.8.1
-	github.com/spf13/pflag v1.0.5
+	github.com/spf13/pflag v1.0.10
 	github.com/tektoncd/cli v0.37.0
 	github.com/tektoncd/pipeline v0.65.2
 	gopkg.in/h2non/gock.v1 v1.1.2
