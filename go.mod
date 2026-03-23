@@ -5,7 +5,7 @@ go 1.25.6
 require (
 	github.com/cli/go-gh/v2 v2.13.0
 	github.com/go-errors/errors v1.5.1
-	github.com/onsi/gomega v1.38.2
+	github.com/onsi/gomega v1.39.1
 	github.com/sigstore/cosign/v2 v2.6.2
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
